@@ -11,7 +11,7 @@ import (
 // VerifyCNID verifies whether the provided CNID is valid
 func VerifyCNID(c *client.Client, id string, name string) (ok bool, err error) {
 	// Build payload
-	payload := v3.MapString{
+	payload := v3.MapAny{
 		"id":   id,
 		"name": name,
 	}
