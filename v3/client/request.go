@@ -25,17 +25,22 @@ type Sender struct {
 
 // Send provides a sender to send request
 func (c *Client) Send(url string, method string, payload any) *Sender {
-	// Marshal payload
-	jsonPayload, err := c.Marshal(payload)
-	if err != nil {
-		return &Sender{
-			client: c,
-			err:    err,
+	// Process payload
+	var finalPayload io.Reader = nil
+	if payload != nil {
+		// Marshal payload
+		jsonPayload, err := c.marshal(payload)
+		if err != nil {
+			return &Sender{
+				client: c,
+				err:    err,
+			}
 		}
+		finalPayload = strings.NewReader(string(jsonPayload))
 	}
 
 	// Build http request
-	req, err := http.NewRequest(method, url, strings.NewReader(string(jsonPayload)))
+	req, err := http.NewRequest(method, url, finalPayload)
 	if err != nil {
 		return &Sender{
 			client: c,
@@ -44,7 +49,9 @@ func (c *Client) Send(url string, method string, payload any) *Sender {
 	}
 
 	// Set content-type
-	req.Header.Add("Content-Type", "application/json")
+	if method == http.MethodPost {
+		req.Header.Add("Content-Type", "application/json")
+	}
 
 	// Return sender
 	return &Sender{
@@ -62,8 +69,8 @@ func (s *Sender) parse(body []byte) *Result {
 		Data any    `json:"data"`
 	}
 
-	// Unmarshal body
-	if err := s.client.Unmarshal(body, &result); err != nil {
+	// unmarshal body
+	if err := s.client.unmarshal(body, &result); err != nil {
 		return &Result{
 			client: s.client,
 			Err:    err,
@@ -71,7 +78,7 @@ func (s *Sender) parse(body []byte) *Result {
 	}
 
 	// Remarshal data part
-	dataBody, err := s.client.Marshal(result.Data)
+	dataBody, err := s.client.marshal(result.Data)
 	if err != nil {
 		return &Result{
 			client: s.client,
@@ -102,9 +109,12 @@ func (s *Sender) WithToken() *Result {
 	client := &http.Client{}
 
 	// Add header
-	s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.Token))
+	s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.token))
 
 	// Send request
+	s.client.logger.Debug(nil, fmt.Sprintf(
+		"send request to %s, method %s with token", s.request.URL, s.request.Method,
+	))
 	res, err := client.Do(s.request)
 	if err != nil {
 		return &Result{
@@ -116,6 +126,14 @@ func (s *Sender) WithToken() *Result {
 		_ = Body.Close()
 	}(res.Body)
 
+	// Handler http code error
+	if res.StatusCode != http.StatusOK {
+		return &Result{
+			client: s.client,
+			Code:   res.StatusCode,
+		}
+	}
+
 	// Get request result
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -125,8 +143,25 @@ func (s *Sender) WithToken() *Result {
 		}
 	}
 
-	// Return parse result
-	return s.parse(body)
+	// Parse result
+	parsed := s.parse(body)
+
+	// Output log
+	var bodyRaw any
+	err = s.client.unmarshal(body, &bodyRaw)
+	if err != nil {
+		return &Result{
+			client: s.client,
+			Err:    err,
+		}
+	}
+	s.client.logger.Debug(nil, fmt.Sprintf(
+		"openAPI response httpCode %d, apiCode %d, responseBody %s",
+		res.StatusCode, parsed.Code, fmt.Sprint(bodyRaw),
+	))
+
+	// Return parsed result
+	return parsed
 }
 
 // WithKey sends a request with SecretID and SecretKey to authorize
@@ -146,6 +181,9 @@ func (s *Sender) WithKey() *Result {
 	s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.SecretID, s.client.SecretKey))
 
 	// Send request
+	s.client.logger.Debug(nil, fmt.Sprintf(
+		"send request to %s, method %s with key", s.request.URL, s.request.Method,
+	))
 	res, err := client.Do(s.request)
 	if err != nil {
 		return &Result{
@@ -157,6 +195,14 @@ func (s *Sender) WithKey() *Result {
 		_ = Body.Close()
 	}(res.Body)
 
+	// Handler http code error
+	if res.StatusCode != http.StatusOK {
+		return &Result{
+			client: s.client,
+			Code:   res.StatusCode,
+		}
+	}
+
 	// Get request result
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -166,8 +212,25 @@ func (s *Sender) WithKey() *Result {
 		}
 	}
 
-	// Return parse result
-	return s.parse(body)
+	// Parse result
+	parsed := s.parse(body)
+
+	// Output log
+	var bodyRaw any
+	err = s.client.unmarshal(body, &bodyRaw)
+	if err != nil {
+		return &Result{
+			client: s.client,
+			Err:    err,
+		}
+	}
+	s.client.logger.Debug(nil, fmt.Sprintf(
+		"openAPI response httpCode %d, apiCode %d, responseBody %s",
+		res.StatusCode, parsed.Code, fmt.Sprint(bodyRaw),
+	))
+
+	// Return parsed result
+	return parsed
 }
 
 // Ok returns a bool value stands for the success or not of the request
@@ -177,5 +240,5 @@ func (r *Result) Ok() bool {
 
 // Unmarshal can unmarshal a request data body to customized struct
 func (r *Result) Unmarshal(v any) error {
-	return r.client.Unmarshal(r.Body, v)
+	return r.client.unmarshal(r.Body, v)
 }
