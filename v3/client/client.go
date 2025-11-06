@@ -16,7 +16,7 @@ type Client struct {
 	enableToken bool
 	token       string
 	expiry      time.Time
-	logger      Logger
+	Logger      Logger
 	marshal     func(any) ([]byte, error)
 	unmarshal   func([]byte, any) error
 }
@@ -27,7 +27,7 @@ type Option func(*Client)
 // WithLogger sets default logger to custom
 func WithLogger(logger Logger) Option {
 	return func(c *Client) {
-		c.logger = logger
+		c.Logger = logger
 	}
 }
 
@@ -52,17 +52,61 @@ func EnableToken(enableToken bool) Option {
 	}
 }
 
+// applyToken applies a new token
+func applyToken(c *Client) error {
+	// Send request
+	result := c.Send(
+		fmt.Sprintf("%s/openAPI/token", v3.Endpoint),
+		http.MethodGet,
+		nil,
+	).WithKey()
+	if result.Err != nil {
+		c.Logger.Error(nil, fmt.Sprintf(
+			"failed to get token, sender error: %s", result.Err.Error(),
+		))
+		return result.Err
+	}
+
+	// Check status code
+	if !result.Ok() {
+		c.Logger.Error(nil, fmt.Sprintf(
+			"failed to get token, upstream failed: code: %d, msg: %s", result.Code, result.Msg,
+		))
+		return fmt.Errorf("failed to get token, upstream failed: code: %d, msg: %s", result.Code, result.Msg)
+	}
+
+	// Build token struct
+	var token struct {
+		Token string `json:"token"`
+	}
+
+	// Unmarshal token data
+	if err := result.Unmarshal(&token); err != nil {
+		c.Logger.Error(nil, fmt.Sprintf(
+			"failed to get token, unmarshal error: %s", result.Err.Error(),
+		))
+		return err
+	}
+
+	// Save token
+	c.token = token.Token
+	return nil
+}
+
 // NewClient creates a new client to use service of Ghink Open API
 func NewClient(secretID string, secretKey string, options ...Option) (*Client, error) {
 	// Create client
 	client := new(Client)
 
 	// Load default logger
-	client.logger = NewLogger()
+	client.Logger = NewLogger()
 
 	// Load default marshal and unmarshal lib
 	client.marshal = json.Marshal
 	client.unmarshal = json.Unmarshal
+
+	// Enable token in default
+	client.enableToken = true
 
 	// Load options
 	for _, f := range options {
@@ -75,41 +119,10 @@ func NewClient(secretID string, secretKey string, options ...Option) (*Client, e
 
 	// Try to get token
 	if client.enableToken {
-		// Send request
-		result := client.Send(
-			fmt.Sprintf("%s/openAPI/token", v3.Endpoint),
-			http.MethodGet,
-			nil,
-		).WithKey()
-		if result.Err != nil {
-			client.logger.Error(nil, fmt.Sprintf(
-				"failed to get token, sender error: %s", result.Err.Error(),
-			))
-			return nil, result.Err
-		}
-
-		// Check status code
-		if !result.Ok() {
-			client.logger.Error(nil, fmt.Sprintf(
-				"failed to get token, upstream failed: code: %d, msg: %s", result.Code, result.Msg,
-			))
-			return nil, fmt.Errorf("failed to get token, upstream failed: code: %d, msg: %s", result.Code, result.Msg)
-		}
-
-		// Build token struct
-		var token struct {
-			Token string `json:"token"`
-		}
-
-		// Unmarshal token data
-		if err := result.Unmarshal(&token); err != nil {
-			client.logger.Error(nil, fmt.Sprintf(
-				"failed to get token, unmarshal error: %s", result.Err.Error(),
-			))
+		err := applyToken(client)
+		if err != nil {
 			return nil, err
 		}
-
-		client.token = token.Token
 	}
 
 	return client, nil
