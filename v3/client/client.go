@@ -1,11 +1,11 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/ghinknet/json"
 	v3 "github.com/ghinknet/openapi-sdk-go/v3"
 )
 
