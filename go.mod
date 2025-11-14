@@ -2,7 +2,7 @@ module github.com/ghinknet/openapi-sdk-go
 
 go 1.24.1
 
-require github.com/ghinknet/json v1.0.0
+require github.com/ghinknet/json v1.1.1
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect

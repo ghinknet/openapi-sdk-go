@@ -11,6 +11,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ghinknet/json v1.0.0 h1:b5x/Xn4OlEMB+A1Uwmnzm4xNMgF0UhO+729Q3gd56aA=
 github.com/ghinknet/json v1.0.0/go.mod h1:8Kh4RPXdzcAUFFqcJB27sslDhSoIM7CfKeGP5GyM7eE=
+github.com/ghinknet/json v1.1.1 h1:VJP6oUR+rdoc9VEgZMj6P5MxmnIo8ReV4wxYYeAC37o=
+github.com/ghinknet/json v1.1.1/go.mod h1:8Kh4RPXdzcAUFFqcJB27sslDhSoIM7CfKeGP5GyM7eE=
 github.com/goccy/go-json v0.10.5 h1:Fq85nIqj+gXn/S5ahsiTlK3TmC85qgirsdTP/+DeaC4=
 github.com/goccy/go-json v0.10.5/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PULtXL6M=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
