@@ -164,15 +164,16 @@ func (s *Sender) WithToken() *Result {
 			// Check failed reason
 			if parsed.Code == 801 {
 				s.client.Logger.Debug(nil, "token expired, try to renew")
+
+				// Sleep 5 second to prevent too many requests
+				time.Sleep(5 * time.Second)
+
 				if err = applyToken(s.client); err != nil {
 					return &Result{
 						client: s.client,
 						Err:    err,
 					}
 				}
-
-				// Sleep 1 second to prevent too many requests
-				time.Sleep(5 * time.Second)
 
 				return nil
 			}
@@ -254,15 +255,16 @@ func (s *Sender) WithKey() *Result {
 			// Check failed reason
 			if parsed.Code == 801 {
 				s.client.Logger.Debug(nil, "token expired, try to renew")
+
+				// Sleep 5 second to prevent too many requests
+				time.Sleep(5 * time.Second)
+
 				if err = applyToken(s.client); err != nil {
 					return &Result{
 						client: s.client,
 						Err:    err,
 					}
 				}
-
-				// Sleep 1 second to prevent too many requests
-				time.Sleep(5 * time.Second)
 
 				return nil
 			}
