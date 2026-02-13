@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Result provides a basic struct to return result
@@ -105,76 +106,82 @@ func (s *Sender) WithToken() *Result {
 		}
 	}
 	for {
-		// Construct client
-		client := &http.Client{}
+		if result := func() *Result {
+			// Construct client
+			client := new(http.Client)
 
-		// Add header
-		s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.token))
+			// Add header
+			s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.token))
 
-		// Send request
-		s.client.Logger.Debug(nil, fmt.Sprintf(
-			"send request to %s, method %s with token", s.request.URL, s.request.Method,
-		))
-		res, err := client.Do(s.request)
-		if err != nil {
-			return &Result{
-				client: s.client,
-				Err:    err,
-			}
-		}
-		defer func(Body io.ReadCloser) {
-			_ = Body.Close()
-		}(res.Body)
-
-		// Handler http code error
-		if res.StatusCode != http.StatusOK {
-			return &Result{
-				client: s.client,
-				Code:   res.StatusCode,
-			}
-		}
-
-		// Get request result
-		body, err := io.ReadAll(res.Body)
-		if err != nil {
-			return &Result{
-				client: s.client,
-				Err:    err,
-			}
-		}
-
-		// Parse result
-		parsed := s.parse(body)
-
-		// Output log
-		var bodyRaw any
-		err = s.client.unmarshal(body, &bodyRaw)
-		if err != nil {
-			return &Result{
-				client: s.client,
-				Err:    err,
-			}
-		}
-		s.client.Logger.Debug(nil, fmt.Sprintf(
-			"openAPI response httpCode %d, apiCode %d, responseBody %s",
-			res.StatusCode, parsed.Code, fmt.Sprint(bodyRaw),
-		))
-
-		// Check failed reason
-		if parsed.Code == 801 {
-			s.client.Logger.Debug(nil, "token expired, try to renew")
-			err = applyToken(s.client)
+			// Send request
+			s.client.Logger.Debug(nil, fmt.Sprintf(
+				"send request to %s, method %s with token", s.request.URL, s.request.Method,
+			))
+			res, err := client.Do(s.request)
 			if err != nil {
 				return &Result{
 					client: s.client,
 					Err:    err,
 				}
 			}
-			continue
-		}
+			defer func(Body io.ReadCloser) {
+				_ = Body.Close()
+			}(res.Body)
 
-		// Return parsed result
-		return parsed
+			// Handler http code error
+			if res.StatusCode != http.StatusOK {
+				return &Result{
+					client: s.client,
+					Code:   res.StatusCode,
+				}
+			}
+
+			// Get request result
+			body, err := io.ReadAll(res.Body)
+			if err != nil {
+				return &Result{
+					client: s.client,
+					Err:    err,
+				}
+			}
+
+			// Parse result
+			parsed := s.parse(body)
+
+			// Output log
+			var bodyRaw any
+			if err = s.client.unmarshal(body, &bodyRaw); err != nil {
+				return &Result{
+					client: s.client,
+					Err:    err,
+				}
+			}
+			s.client.Logger.Debug(nil, fmt.Sprintf(
+				"openAPI response httpCode %d, apiCode %d, responseBody %s",
+				res.StatusCode, parsed.Code, fmt.Sprint(bodyRaw),
+			))
+
+			// Check failed reason
+			if parsed.Code == 801 {
+				s.client.Logger.Debug(nil, "token expired, try to renew")
+				if err = applyToken(s.client); err != nil {
+					return &Result{
+						client: s.client,
+						Err:    err,
+					}
+				}
+
+				// Sleep 1 second to prevent too many requests
+				time.Sleep(5 * time.Second)
+
+				return nil
+			}
+
+			// Return parsed result
+			return parsed
+		}(); result != nil {
+			return result
+		}
 	}
 }
 
@@ -189,76 +196,82 @@ func (s *Sender) WithKey() *Result {
 	}
 
 	for {
-		// Construct client
-		client := &http.Client{}
+		if result := func() *Result {
+			// Construct client
+			client := new(http.Client)
 
-		// Add header
-		s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.SecretID, s.client.SecretKey))
+			// Add header
+			s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.SecretID, s.client.SecretKey))
 
-		// Send request
-		s.client.Logger.Debug(nil, fmt.Sprintf(
-			"send request to %s, method %s with key", s.request.URL, s.request.Method,
-		))
-		res, err := client.Do(s.request)
-		if err != nil {
-			return &Result{
-				client: s.client,
-				Err:    err,
-			}
-		}
-		defer func(Body io.ReadCloser) {
-			_ = Body.Close()
-		}(res.Body)
-
-		// Handler http code error
-		if res.StatusCode != http.StatusOK {
-			return &Result{
-				client: s.client,
-				Code:   res.StatusCode,
-			}
-		}
-
-		// Get request result
-		body, err := io.ReadAll(res.Body)
-		if err != nil {
-			return &Result{
-				client: s.client,
-				Err:    err,
-			}
-		}
-
-		// Parse result
-		parsed := s.parse(body)
-
-		// Output log
-		var bodyRaw any
-		err = s.client.unmarshal(body, &bodyRaw)
-		if err != nil {
-			return &Result{
-				client: s.client,
-				Err:    err,
-			}
-		}
-		s.client.Logger.Debug(nil, fmt.Sprintf(
-			"openAPI response httpCode %d, apiCode %d, responseBody %s",
-			res.StatusCode, parsed.Code, fmt.Sprint(bodyRaw),
-		))
-
-		// Check failed reason
-		if parsed.Code == 801 {
-			s.client.Logger.Debug(nil, "token expired, try to renew")
-			err = applyToken(s.client)
+			// Send request
+			s.client.Logger.Debug(nil, fmt.Sprintf(
+				"send request to %s, method %s with key", s.request.URL, s.request.Method,
+			))
+			res, err := client.Do(s.request)
 			if err != nil {
 				return &Result{
 					client: s.client,
 					Err:    err,
 				}
 			}
-			continue
-		}
+			defer func(Body io.ReadCloser) {
+				_ = Body.Close()
+			}(res.Body)
 
-		// Return parsed result
-		return parsed
+			// Handler http code error
+			if res.StatusCode != http.StatusOK {
+				return &Result{
+					client: s.client,
+					Code:   res.StatusCode,
+				}
+			}
+
+			// Get request result
+			body, err := io.ReadAll(res.Body)
+			if err != nil {
+				return &Result{
+					client: s.client,
+					Err:    err,
+				}
+			}
+
+			// Parse result
+			parsed := s.parse(body)
+
+			// Output log
+			var bodyRaw any
+			if err = s.client.unmarshal(body, &bodyRaw); err != nil {
+				return &Result{
+					client: s.client,
+					Err:    err,
+				}
+			}
+			s.client.Logger.Debug(nil, fmt.Sprintf(
+				"openAPI response httpCode %d, apiCode %d, responseBody %s",
+				res.StatusCode, parsed.Code, fmt.Sprint(bodyRaw),
+			))
+
+			// Check failed reason
+			if parsed.Code == 801 {
+				s.client.Logger.Debug(nil, "token expired, try to renew")
+				if err = applyToken(s.client); err != nil {
+					return &Result{
+						client: s.client,
+						Err:    err,
+					}
+				}
+
+				// Sleep 1 second to prevent too many requests
+				time.Sleep(5 * time.Second)
+
+				return nil
+			}
+
+			// Return parsed result
+			return parsed
+		}(); result != nil {
+			return result
+		}
 	}
 }
 

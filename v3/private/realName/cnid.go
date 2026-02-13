@@ -11,8 +11,8 @@ import (
 	"github.com/ghinknet/openapi-sdk-go/v3/client"
 )
 
-// isValidID checks whether the ID is a valid Chinese Mainland ID
-func isValidID(idNumber string) bool {
+// IsValidID checks whether the ID is a valid Chinese Mainland ID
+func IsValidID(idNumber string) bool {
 	if len(idNumber) != 18 {
 		return false
 	}
@@ -43,11 +43,11 @@ func isValidID(idNumber string) bool {
 		return false
 	}
 
-	if !isValidDate(year, month, day) {
+	if !IsValidDate(year, month, day) {
 		return false
 	}
 
-	factors := []int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
+	factors := [17]int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
 	checksumDict := map[int]string{
 		0:  "1",
 		1:  "0",
@@ -74,8 +74,8 @@ func isValidID(idNumber string) bool {
 	return lastChar == correctChecksum
 }
 
-// isValidDate checks whether the date is a valid date
-func isValidDate(year, month, day int) bool {
+// IsValidDate checks whether the date is a valid date
+func IsValidDate(year, month, day int) bool {
 	_, err := time.Parse("2006-01-02", fmt.Sprintf("%04d-%02d-%02d", year, month, day))
 	return err == nil
 }
@@ -83,7 +83,7 @@ func isValidDate(year, month, day int) bool {
 // VerifyCNID verifies whether the provided CNID is valid
 func VerifyCNID(c *client.Client, id string, name string) (ok bool, err error) {
 	// Check CNID format valid
-	if !isValidID(id) {
+	if !IsValidID(id) {
 		return false, nil
 	}
 

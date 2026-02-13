@@ -119,8 +119,7 @@ func NewClient(secretID string, secretKey string, options ...Option) (*Client, e
 
 	// Try to get token
 	if client.enableToken {
-		err := applyToken(client)
-		if err != nil {
+		if err := applyToken(client); err != nil {
 			return nil, err
 		}
 	}
