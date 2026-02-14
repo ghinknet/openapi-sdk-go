@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	v3 "github.com/ghinknet/openapi-sdk-go/v3"
 )
 
 // Result provides a basic struct to return result
@@ -110,8 +112,9 @@ func (s *Sender) WithToken() *Result {
 			// Construct client
 			client := new(http.Client)
 
-			// Add header
+			// Add headers
 			s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.token))
+			s.request.Header.Add("User-Agent", v3.UserAgent)
 
 			// Send request
 			s.client.Logger.Debug(nil, fmt.Sprintf(
@@ -203,6 +206,7 @@ func (s *Sender) WithKey() *Result {
 
 			// Add header
 			s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.SecretID, s.client.SecretKey))
+			s.request.Header.Add("User-Agent", v3.UserAgent)
 
 			// Send request
 			s.client.Logger.Debug(nil, fmt.Sprintf(
