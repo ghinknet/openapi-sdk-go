@@ -3,7 +3,6 @@ package client
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/ghinknet/json"
 	v3 "github.com/ghinknet/openapi-sdk-go/v3"
@@ -11,14 +10,17 @@ import (
 
 // Client provides basic struct for client object
 type Client struct {
-	SecretID    string
-	SecretKey   string
-	enableToken bool
-	token       string
-	expiry      time.Time
-	Logger      Logger
-	marshal     func(any) ([]byte, error)
-	unmarshal   func([]byte, any) error
+	endpoint           string
+	secretID           string
+	secretKey          string
+	enableToken        bool
+	token              string
+	maxRetries         int
+	retryDelay         int
+	exponentialBackoff bool
+	marshal            func(any) ([]byte, error)
+	unmarshal          func([]byte, any) error
+	Logger             Logger
 }
 
 // Option provides a basic option type
@@ -28,6 +30,13 @@ type Option func(*Client)
 func WithLogger(logger Logger) Option {
 	return func(c *Client) {
 		c.Logger = logger
+	}
+}
+
+// WithEndpoint sets default endpoint
+func WithEndpoint(endpoint string) Option {
+	return func(c *Client) {
+		c.endpoint = endpoint
 	}
 }
 
@@ -45,6 +54,27 @@ func WithUnmarshal(unmarshal func([]byte, any) error) Option {
 	}
 }
 
+// WithMaxRetries sets max retries for request
+func WithMaxRetries(maxRetries int) Option {
+	return func(c *Client) {
+		c.maxRetries = maxRetries
+	}
+}
+
+// WithRetryDelay sets retry delay for request
+func WithRetryDelay(retryDelay int) Option {
+	return func(c *Client) {
+		c.retryDelay = retryDelay
+	}
+}
+
+// WithExponentialBackoff sets exponential backoff for request
+func WithExponentialBackoff(exponentialBackoff bool) Option {
+	return func(c *Client) {
+		c.exponentialBackoff = exponentialBackoff
+	}
+}
+
 // EnableToken enables token as authorization
 func EnableToken(enableToken bool) Option {
 	return func(c *Client) {
@@ -52,11 +82,16 @@ func EnableToken(enableToken bool) Option {
 	}
 }
 
+// GetEndpoint returns endpoint
+func (c *Client) GetEndpoint() string {
+	return c.endpoint
+}
+
 // applyToken applies a new token
 func applyToken(c *Client) error {
 	// Send request
 	result := c.Send(
-		fmt.Sprintf("%s/openAPI/token", v3.Endpoint),
+		fmt.Sprintf("%s/openAPI/token", c.endpoint),
 		http.MethodGet,
 		nil,
 	).WithKey()
@@ -68,7 +103,7 @@ func applyToken(c *Client) error {
 	}
 
 	// Check status code
-	if !result.Ok() {
+	if !result.OK() {
 		c.Logger.Error(nil, fmt.Sprintf(
 			"failed to get token, upstream failed: code: %d, msg: %s", result.Code, result.Msg,
 		))
@@ -101,9 +136,17 @@ func NewClient(secretID string, secretKey string, options ...Option) (*Client, e
 	// Load default logger
 	client.Logger = NewLogger()
 
+	// Load default endpoint
+	client.endpoint = v3.Endpoint
+
 	// Load default marshal and unmarshal lib
 	client.marshal = json.Marshal
 	client.unmarshal = json.Unmarshal
+
+	// Load default maxRetries and retryDelay
+	client.maxRetries = 5
+	client.retryDelay = 1
+	client.exponentialBackoff = true
 
 	// Enable token in default
 	client.enableToken = true
@@ -114,8 +157,8 @@ func NewClient(secretID string, secretKey string, options ...Option) (*Client, e
 	}
 
 	// Save keys
-	client.SecretID = secretID
-	client.SecretKey = secretKey
+	client.secretID = secretID
+	client.secretKey = secretKey
 
 	// Try to get token
 	if client.enableToken {

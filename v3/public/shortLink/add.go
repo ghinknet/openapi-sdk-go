@@ -19,7 +19,7 @@ func Add(c *client.Client, link string, validity *time.Time) (ok string, err err
 
 	// Send request
 	result := c.Send(
-		fmt.Sprintf("%s%s/add", v3.Endpoint, Endpoint),
+		fmt.Sprintf("%s%s/add", c.GetEndpoint(), Endpoint),
 		http.MethodPost,
 		payload,
 	).WithToken()
@@ -31,7 +31,7 @@ func Add(c *client.Client, link string, validity *time.Time) (ok string, err err
 	}
 
 	// Check status code
-	if !result.Ok() {
+	if !result.OK() {
 		c.Logger.Error(nil, fmt.Sprintf(
 			"failed to add short link, upstream failed: code: %d, msg: %s", result.Code, result.Msg,
 		))

@@ -7,9 +7,9 @@ import (
 
 const Endpoint = "https://api.gh.ink/v3"
 
-var Version = [3]int{1, 0, 6}
+var Version = [3]int{1, 0, 7}
 var UserAgent = fmt.Sprintf(
-	"GhinkOpenAPISDK-GO/%d.%d.%d (%s; %s)",
+	"GhinkOpenAPISDK-Go/%d.%d.%d (%s; %s)",
 	Version[0], Version[1], Version[2],
 	runtime.GOOS, runtime.GOARCH,
 )

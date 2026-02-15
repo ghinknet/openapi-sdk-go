@@ -107,7 +107,8 @@ func (s *Sender) WithToken() *Result {
 			Err:    s.err,
 		}
 	}
-	for {
+
+	for attempt := 0; attempt < s.client.maxRetries; attempt++ {
 		if result := func() *Result {
 			// Construct client
 			client := new(http.Client)
@@ -118,14 +119,12 @@ func (s *Sender) WithToken() *Result {
 
 			// Send request
 			s.client.Logger.Debug(nil, fmt.Sprintf(
-				"send request to %s, method %s with token", s.request.URL, s.request.Method,
+				"send request to %s, method %s with token (attempt %d)", s.request.URL, s.request.Method, attempt+1,
 			))
 			res, err := client.Do(s.request)
 			if err != nil {
-				return &Result{
-					client: s.client,
-					Err:    err,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("request failed: %v, retrying...", err))
+				return nil // Retry on network errors
 			}
 			defer func(Body io.ReadCloser) {
 				_ = Body.Close()
@@ -133,19 +132,15 @@ func (s *Sender) WithToken() *Result {
 
 			// Handler http code error
 			if res.StatusCode != http.StatusOK {
-				return &Result{
-					client: s.client,
-					Code:   res.StatusCode,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("received HTTP status %d, retrying...", res.StatusCode))
+				return nil // Retry on non-200 status codes
 			}
 
 			// Get request result
 			body, err := io.ReadAll(res.Body)
 			if err != nil {
-				return &Result{
-					client: s.client,
-					Err:    err,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("failed to read response body: %v, retrying...", err))
+				return nil // Retry on body read errors
 			}
 
 			// Parse result
@@ -154,10 +149,8 @@ func (s *Sender) WithToken() *Result {
 			// Output log
 			var bodyRaw any
 			if err = s.client.unmarshal(body, &bodyRaw); err != nil {
-				return &Result{
-					client: s.client,
-					Err:    err,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("failed to unmarshal response body: %v, retrying...", err))
+				return nil // Retry on unmarshal errors
 			}
 			s.client.Logger.Debug(nil, fmt.Sprintf(
 				"openAPI response httpCode %d, apiCode %d, responseBody %s",
@@ -166,10 +159,10 @@ func (s *Sender) WithToken() *Result {
 
 			// Check failed reason
 			if parsed.Code == 801 {
-				s.client.Logger.Debug(nil, "token expired, try to renew")
+				s.client.Logger.Debug(nil, "permission denied, maybe token expired, try to renew")
 
-				// Sleep 5 second to prevent too many requests
-				time.Sleep(5 * time.Second)
+				// Sleep to prevent too many requests
+				time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
 
 				if err = applyToken(s.client); err != nil {
 					return &Result{
@@ -178,7 +171,7 @@ func (s *Sender) WithToken() *Result {
 					}
 				}
 
-				return nil
+				return nil // Retry after token renewal
 			}
 
 			// Return parsed result
@@ -186,6 +179,21 @@ func (s *Sender) WithToken() *Result {
 		}(); result != nil {
 			return result
 		}
+
+		// Wait before retrying
+		if attempt < s.client.maxRetries-1 {
+			s.client.Logger.Debug(nil, fmt.Sprintf("retrying in %v...", s.client.retryDelay))
+			time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
+			if s.client.exponentialBackoff {
+				s.client.retryDelay *= 2 // Exponential backoff
+			}
+		}
+	}
+
+	// If all retries failed, return an error
+	return &Result{
+		client: s.client,
+		Err:    fmt.Errorf("request failed after %d retries", s.client.maxRetries),
 	}
 }
 
@@ -199,25 +207,23 @@ func (s *Sender) WithKey() *Result {
 		}
 	}
 
-	for {
+	for attempt := 0; attempt < s.client.maxRetries; attempt++ {
 		if result := func() *Result {
 			// Construct client
 			client := new(http.Client)
 
-			// Add header
-			s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.SecretID, s.client.SecretKey))
+			// Add headers
+			s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.secretID, s.client.secretKey))
 			s.request.Header.Add("User-Agent", v3.UserAgent)
 
 			// Send request
 			s.client.Logger.Debug(nil, fmt.Sprintf(
-				"send request to %s, method %s with key", s.request.URL, s.request.Method,
+				"send request to %s, method %s with key (attempt %d)", s.request.URL, s.request.Method, attempt+1,
 			))
 			res, err := client.Do(s.request)
 			if err != nil {
-				return &Result{
-					client: s.client,
-					Err:    err,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("request failed: %v, retrying...", err))
+				return nil // Retry on network errors
 			}
 			defer func(Body io.ReadCloser) {
 				_ = Body.Close()
@@ -225,19 +231,15 @@ func (s *Sender) WithKey() *Result {
 
 			// Handler http code error
 			if res.StatusCode != http.StatusOK {
-				return &Result{
-					client: s.client,
-					Code:   res.StatusCode,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("received HTTP status %d, retrying...", res.StatusCode))
+				return nil // Retry on non-200 status codes
 			}
 
 			// Get request result
 			body, err := io.ReadAll(res.Body)
 			if err != nil {
-				return &Result{
-					client: s.client,
-					Err:    err,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("failed to read response body: %v, retrying...", err))
+				return nil // Retry on body read errors
 			}
 
 			// Parse result
@@ -246,10 +248,8 @@ func (s *Sender) WithKey() *Result {
 			// Output log
 			var bodyRaw any
 			if err = s.client.unmarshal(body, &bodyRaw); err != nil {
-				return &Result{
-					client: s.client,
-					Err:    err,
-				}
+				s.client.Logger.Debug(nil, fmt.Sprintf("failed to unmarshal response body: %v, retrying...", err))
+				return nil // Retry on unmarshal errors
 			}
 			s.client.Logger.Debug(nil, fmt.Sprintf(
 				"openAPI response httpCode %d, apiCode %d, responseBody %s",
@@ -258,19 +258,12 @@ func (s *Sender) WithKey() *Result {
 
 			// Check failed reason
 			if parsed.Code == 801 {
-				s.client.Logger.Debug(nil, "token expired, try to renew")
+				s.client.Logger.Debug(nil, "permission denied")
 
-				// Sleep 5 second to prevent too many requests
-				time.Sleep(5 * time.Second)
+				// Sleep to prevent too many requests
+				time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
 
-				if err = applyToken(s.client); err != nil {
-					return &Result{
-						client: s.client,
-						Err:    err,
-					}
-				}
-
-				return nil
+				return nil // Retry after token renewal
 			}
 
 			// Return parsed result
@@ -278,11 +271,26 @@ func (s *Sender) WithKey() *Result {
 		}(); result != nil {
 			return result
 		}
+
+		// Wait before retrying
+		if attempt < s.client.maxRetries-1 {
+			s.client.Logger.Debug(nil, fmt.Sprintf("retrying in %v...", s.client.retryDelay))
+			time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
+			if s.client.exponentialBackoff {
+				s.client.retryDelay *= 2 // Exponential backoff
+			}
+		}
+	}
+
+	// If all retries failed, return an error
+	return &Result{
+		client: s.client,
+		Err:    fmt.Errorf("request failed after %d retries", s.client.maxRetries),
 	}
 }
 
-// Ok returns a bool value stands for the success or not of the request
-func (r *Result) Ok() bool {
+// OK returns a bool value stands for the success or not of the request
+func (r *Result) OK() bool {
 	return r.Code == 200
 }
 

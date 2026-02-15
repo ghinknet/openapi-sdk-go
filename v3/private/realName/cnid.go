@@ -95,7 +95,7 @@ func VerifyCNID(c *client.Client, id string, name string) (ok bool, err error) {
 
 	// Send request
 	result := c.Send(
-		fmt.Sprintf("%s%s/cnid", v3.Endpoint, Endpoint),
+		fmt.Sprintf("%s%s/cnid", c.GetEndpoint(), Endpoint),
 		http.MethodPost,
 		payload,
 	).WithToken()
@@ -107,7 +107,7 @@ func VerifyCNID(c *client.Client, id string, name string) (ok bool, err error) {
 	}
 
 	// Check status code
-	if !result.Ok() {
+	if !result.OK() {
 		c.Logger.Error(nil, fmt.Sprintf(
 			"failed to verify CNID, upstream failed: code: %d, msg: %s", result.Code, result.Msg,
 		))
