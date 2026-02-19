@@ -67,8 +67,8 @@ func (c *Client) Send(url string, method string, payload any) *Sender {
 // parse returns parsed body data
 func (s *Sender) parse(body []byte) *Result {
 	var result struct {
-		Code int    `json:"Code"`
-		Msg  string `json:"Msg"`
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
 		Data any    `json:"data"`
 	}
 
@@ -111,7 +111,9 @@ func (s *Sender) WithToken() *Result {
 	for attempt := 0; attempt < s.client.maxRetries; attempt++ {
 		if result := func() *Result {
 			// Construct client
-			client := new(http.Client)
+			client := &http.Client{
+				Timeout: time.Duration(s.client.timeout) * time.Second,
+			}
 
 			// Add headers
 			s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.token))
@@ -210,7 +212,9 @@ func (s *Sender) WithKey() *Result {
 	for attempt := 0; attempt < s.client.maxRetries; attempt++ {
 		if result := func() *Result {
 			// Construct client
-			client := new(http.Client)
+			client := &http.Client{
+				Timeout: time.Duration(s.client.timeout) * time.Second,
+			}
 
 			// Add headers
 			s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.secretID, s.client.secretKey))

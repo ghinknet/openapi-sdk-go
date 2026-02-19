@@ -15,6 +15,7 @@ type Client struct {
 	secretKey          string
 	enableToken        bool
 	token              string
+	timeout            int
 	maxRetries         int
 	retryDelay         int
 	exponentialBackoff bool
@@ -51,6 +52,13 @@ func WithMarshal(marshal func(any) ([]byte, error)) Option {
 func WithUnmarshal(unmarshal func([]byte, any) error) Option {
 	return func(c *Client) {
 		c.unmarshal = unmarshal
+	}
+}
+
+// WithTimeout sets timeout for request
+func WithTimeout(timeout int) Option {
+	return func(c *Client) {
+		c.timeout = timeout
 	}
 }
 
@@ -144,6 +152,7 @@ func NewClient(secretID string, secretKey string, options ...Option) (*Client, e
 	client.unmarshal = json.Unmarshal
 
 	// Load default maxRetries and retryDelay
+	client.timeout = 3
 	client.maxRetries = 5
 	client.retryDelay = 1
 	client.exponentialBackoff = true
