@@ -108,6 +108,9 @@ func (s *Sender) WithToken() *Result {
 		}
 	}
 
+	// Copy retry delay
+	retryDelay := s.client.retryDelay
+
 	for attempt := 0; attempt < s.client.maxRetries; attempt++ {
 		if result := func() *Result {
 			// Construct client
@@ -164,7 +167,11 @@ func (s *Sender) WithToken() *Result {
 				s.client.Logger.Debug(nil, "permission denied, maybe token expired, try to renew")
 
 				// Sleep to prevent too many requests
-				time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
+				time.Sleep(time.Duration(retryDelay) * time.Second)
+
+				if s.client.exponentialBackoff {
+					retryDelay *= 2 // Exponential backoff
+				}
 
 				if err = applyToken(s.client); err != nil {
 					return &Result{
@@ -184,10 +191,12 @@ func (s *Sender) WithToken() *Result {
 
 		// Wait before retrying
 		if attempt < s.client.maxRetries-1 {
-			s.client.Logger.Debug(nil, fmt.Sprintf("retrying in %v...", s.client.retryDelay))
-			time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
+			s.client.Logger.Debug(nil, fmt.Sprintf("retrying in %v...", retryDelay))
+
+			time.Sleep(time.Duration(retryDelay) * time.Second)
+
 			if s.client.exponentialBackoff {
-				s.client.retryDelay *= 2 // Exponential backoff
+				retryDelay *= 2 // Exponential backoff
 			}
 		}
 	}
@@ -208,6 +217,9 @@ func (s *Sender) WithKey() *Result {
 			Err:    s.err,
 		}
 	}
+
+	// Copy retry delay
+	retryDelay := s.client.retryDelay
 
 	for attempt := 0; attempt < s.client.maxRetries; attempt++ {
 		if result := func() *Result {
@@ -265,7 +277,11 @@ func (s *Sender) WithKey() *Result {
 				s.client.Logger.Debug(nil, "permission denied")
 
 				// Sleep to prevent too many requests
-				time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
+				time.Sleep(time.Duration(retryDelay) * time.Second)
+
+				if s.client.exponentialBackoff {
+					retryDelay *= 2 // Exponential backoff
+				}
 
 				return nil // Retry after token renewal
 			}
@@ -278,10 +294,12 @@ func (s *Sender) WithKey() *Result {
 
 		// Wait before retrying
 		if attempt < s.client.maxRetries-1 {
-			s.client.Logger.Debug(nil, fmt.Sprintf("retrying in %v...", s.client.retryDelay))
-			time.Sleep(time.Duration(s.client.retryDelay) * time.Second)
+			s.client.Logger.Debug(nil, fmt.Sprintf("retrying in %v...", retryDelay))
+
+			time.Sleep(time.Duration(retryDelay) * time.Second)
+
 			if s.client.exponentialBackoff {
-				s.client.retryDelay *= 2 // Exponential backoff
+				retryDelay *= 2 // Exponential backoff
 			}
 		}
 	}
