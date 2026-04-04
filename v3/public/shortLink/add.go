@@ -3,6 +3,7 @@ package shortLink
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	v3 "github.com/ghinknet/openapi-sdk-go/v3"
@@ -19,7 +20,7 @@ func Add(c *client.Client, link string, validity *time.Time) (ok string, err err
 
 	// Send request
 	result := c.Send(
-		fmt.Sprintf("%s%s/add", c.GetEndpoint(), Endpoint),
+		strings.Join([]string{c.GetEndpoint(), Endpoint, "/add"}, ""),
 		http.MethodPost,
 		payload,
 	).WithToken()

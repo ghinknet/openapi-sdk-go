@@ -1,10 +1,11 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/ghinknet/json"
 	v3 "github.com/ghinknet/openapi-sdk-go/v3"
 )
 
@@ -99,7 +100,7 @@ func (c *Client) GetEndpoint() string {
 func applyToken(c *Client) error {
 	// Send request
 	result := c.Send(
-		fmt.Sprintf("%s/openAPI/token", c.endpoint),
+		strings.Join([]string{c.endpoint, "/openAPI/token"}, ""),
 		http.MethodGet,
 		nil,
 	).WithKey()

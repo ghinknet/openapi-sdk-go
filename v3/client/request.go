@@ -119,7 +119,7 @@ func (s *Sender) WithToken() *Result {
 			}
 
 			// Add headers
-			s.request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.client.token))
+			s.request.Header.Add("Authorization", strings.Join([]string{"Bearer ", s.client.token}, ""))
 			s.request.Header.Add("User-Agent", v3.UserAgent)
 
 			// Send request

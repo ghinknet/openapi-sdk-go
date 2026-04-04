@@ -102,7 +102,7 @@ func VerifyCNID(c *client.Client, id string, name string) (ok bool, err error) {
 
 	// Send request
 	result := c.Send(
-		fmt.Sprintf("%s%s/cnid", c.GetEndpoint(), Endpoint),
+		strings.Join([]string{c.GetEndpoint(), Endpoint, "/cnid"}, ""),
 		http.MethodPost,
 		payload,
 	).WithToken()
