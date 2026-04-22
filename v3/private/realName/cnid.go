@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	v3 "github.com/ghinknet/openapi-sdk-go/v3"
-	"github.com/ghinknet/openapi-sdk-go/v3/client"
+	"go.gh.ink/openapi/sdk/20260422/v3"
+	"go.gh.ink/openapi/sdk/20260422/v3/client"
 )
 
 // IsValidID checks whether the ID is a valid Chinese Mainland ID
@@ -95,7 +95,7 @@ func VerifyCNID(c *client.Client, id string, name string) (ok bool, err error) {
 	}
 
 	// Build payload
-	payload := v3.MapAny{
+	payload := openapi.MapAny{
 		"id":   id,
 		"name": name,
 	}

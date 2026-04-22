@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	v3 "github.com/ghinknet/openapi-sdk-go/v3"
+	"go.gh.ink/openapi/sdk/20260422/v3"
 )
 
 // Result provides a basic struct to return result
@@ -98,7 +98,7 @@ func (s *Sender) parse(body []byte) *Result {
 	}
 }
 
-// WithToken sends a request with token to authorize
+// WithToken sends a request with token to authorise
 func (s *Sender) WithToken() *Result {
 	// Handle error
 	if s.err != nil {
@@ -120,7 +120,7 @@ func (s *Sender) WithToken() *Result {
 
 			// Add headers
 			s.request.Header.Add("Authorization", strings.Join([]string{"Bearer ", s.client.token}, ""))
-			s.request.Header.Add("User-Agent", v3.UserAgent)
+			s.request.Header.Add("User-Agent", openapi.UserAgent)
 
 			// Send request
 			s.client.Logger.Debug(nil, fmt.Sprintf(
@@ -230,7 +230,7 @@ func (s *Sender) WithKey() *Result {
 
 			// Add headers
 			s.request.Header.Add("Authorization", fmt.Sprintf("Basic %s:%s", s.client.secretID, s.client.secretKey))
-			s.request.Header.Add("User-Agent", v3.UserAgent)
+			s.request.Header.Add("User-Agent", openapi.UserAgent)
 
 			// Send request
 			s.client.Logger.Debug(nil, fmt.Sprintf(
@@ -316,7 +316,7 @@ func (r *Result) OK() bool {
 	return r.Code == 200
 }
 
-// Unmarshal can unmarshal a request data body to customized struct
+// Unmarshal can unmarshal a request data body to customised struct
 func (r *Result) Unmarshal(v any) error {
 	return r.client.unmarshal(r.Body, v)
 }

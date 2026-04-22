@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	v3 "github.com/ghinknet/openapi-sdk-go/v3"
+	"go.gh.ink/openapi/sdk/20260422/v3"
 )
 
 // Client provides basic struct for client object
@@ -84,7 +84,7 @@ func WithExponentialBackoff(exponentialBackoff bool) Option {
 	}
 }
 
-// EnableToken enables token as authorization
+// EnableToken enables token as authorisation
 func EnableToken(enableToken bool) Option {
 	return func(c *Client) {
 		c.enableToken = enableToken
@@ -146,7 +146,7 @@ func NewClient(secretID string, secretKey string, options ...Option) (*Client, e
 	client.Logger = NewLogger()
 
 	// Load default endpoint
-	client.endpoint = v3.Endpoint
+	client.endpoint = openapi.Endpoint
 
 	// Load default marshal and unmarshal lib
 	client.marshal = json.Marshal

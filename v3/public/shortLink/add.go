@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	v3 "github.com/ghinknet/openapi-sdk-go/v3"
-	"github.com/ghinknet/openapi-sdk-go/v3/client"
+	"go.gh.ink/openapi/sdk/20260422/v3"
+	"go.gh.ink/openapi/sdk/20260422/v3/client"
 )
 
 // Add a short link
 func Add(c *client.Client, link string, validity *time.Time) (ok string, err error) {
 	// Build payload
-	payload := v3.MapAny{
+	payload := openapi.MapAny{
 		"link":     link,
 		"validity": validity.Unix(),
 	}
